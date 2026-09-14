@@ -1,0 +1,155 @@
+{
+  "name": "Solar V2 · 06 · Manager summary",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 06 · Manager summary\nQueues one daily summary at 18:00 IST. Set MANAGER_EMAIL; the email worker handles delivery and TEST routing. Includes enquiry, pending follow-up, overdue, visit and proposal counts.\n\nImport inactive. Set Connection settings, then select your Google credentials. V2_Config starts TEST / automation No. Read CONNECTING.md before testing.",
+        "height": 260,
+        "width": 620
+      },
+      "id": "a79b72ca-e9cc-5363-9303-347f05a63fa0",
+      "name": "Read first",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -350
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 18 * * *"
+            }
+          ]
+        }
+      },
+      "id": "b71aa979-fcb7-58db-9537-e779c546c70c",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "3957a719-c177-5438-b3ef-60f06e50d070",
+      "name": "Run once",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        170
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Configure these two values after deploying the Apps Script bridge.\n// Keep configured exports private: this field contains an integration secret.\nconst api_url = 'https://script.google.com/macros/s/REPLACE_DEPLOYMENT_ID/exec';\nconst api_token = 'REPLACE_WITH_SCRIPT_PROPERTY_TOKEN';\nconst use_ai = false; // Deliberately off. No AI credential needed for rules.\nreturn $input.all().map((item,index)=>({json:{...item.json,api_url,api_token,use_ai},pairedItem:{item:index}}));"
+      },
+      "id": "d9fa333a-85b3-586d-bc05-716f9da78ff3",
+      "name": "Connection settings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        230,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Connection settings').first().json.api_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({token:$('Connection settings').first().json.api_token,type:\"queue_summary\",request_id:'n8n:'+$execution.id+':queue_summary'+':'+$itemIndex,payload:{},actor:'n8n'}) }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "911e0f61-beba-5303-90fe-d6f7f8aa16b6",
+      "name": "Queue manager summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "if(!$json.ok)throw new Error($json.error||'Solar API failed');\nreturn [{json:$json.result||{ok:true}}];"
+      },
+      "id": "554485d5-170d-50bd-a44a-6f1b3fe7d4fe",
+      "name": "Summary result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        690,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Connection settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run once": {
+      "main": [
+        [
+          {
+            "node": "Connection settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Connection settings": {
+      "main": [
+        [
+          {
+            "node": "Queue manager summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Queue manager summary": {
+      "main": [
+        [
+          {
+            "node": "Summary result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata"
+  },
+  "pinData": {},
+  "tags": []
+}

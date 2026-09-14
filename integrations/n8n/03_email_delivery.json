@@ -1,0 +1,507 @@
+{
+  "name": "Solar V2 · 03 · Email delivery",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 03 · Email delivery\nClaims one email per run. Rechecks stop controls before sending. TEST reroutes to your test inbox. Proposal PDFs download privately and attach to Gmail. Do not enable automatic retries on Gmail nodes.\n\nImport inactive. Set Connection settings, then select your Google credentials. V2_Config starts TEST / automation No. Read CONNECTING.md before testing.",
+        "height": 260,
+        "width": 620
+      },
+      "id": "5665abc6-d570-5176-af9d-fab841d53a6f",
+      "name": "Read first",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -350
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "* * * * *"
+            }
+          ]
+        }
+      },
+      "id": "817376c7-b162-518a-a8e1-cd0a8038d9f6",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "6ace8f33-c46e-59d6-96ec-db2957721981",
+      "name": "Run once",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        170
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Configure these two values after deploying the Apps Script bridge.\n// Keep configured exports private: this field contains an integration secret.\nconst api_url = 'https://script.google.com/macros/s/REPLACE_DEPLOYMENT_ID/exec';\nconst api_token = 'REPLACE_WITH_SCRIPT_PROPERTY_TOKEN';\nconst use_ai = false; // Deliberately off. No AI credential needed for rules.\nreturn $input.all().map((item,index)=>({json:{...item.json,api_url,api_token,use_ai},pairedItem:{item:index}}));"
+      },
+      "id": "617275f0-a846-5b90-8268-07169f6ba891",
+      "name": "Connection settings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        230,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Connection settings').first().json.api_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({token:$('Connection settings').first().json.api_token,type:\"claim_delivery\",request_id:'n8n:'+$execution.id+':claim_delivery'+':'+$itemIndex,payload:{\"kind\": \"email\"},actor:'n8n'}) }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "913d0b07-c296-5a6d-991b-f6a2b4c3770a",
+      "name": "Claim delivery",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "if(!$json.ok)throw new Error($json.error||'Solar API failed');\nif(!$json.result?.task)return [];\nreturn [{json:{task:$json.result.task}}];"
+      },
+      "id": "cabe2b77-40f3-51c6-8734-21359e1197ef",
+      "name": "Claim available",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        690,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Connection settings').first().json.api_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({token:$('Connection settings').first().json.api_token,type:\"begin_delivery\",request_id:'n8n:'+$execution.id+':begin_delivery'+':'+$itemIndex,payload:({delivery_id:$json.task.delivery_id,claim_token:$json.task.claim_token}),actor:'n8n'}) }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "b4515a74-5a41-5d19-bfc4-5314f9a457ff",
+      "name": "Begin delivery",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "if(!$json.ok)throw new Error($json.error||'Solar API failed');\nif(!$json.result?.task)return [];\nreturn [{json:{task:$json.result.task}}];"
+      },
+      "id": "47c9e3f5-d0d2-5679-a963-fe3135223dff",
+      "name": "Delivery ready",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1150,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "016f2e72-034d-4dbd-b0d7-bbadf5a78315",
+              "leftValue": "={{ !!$json.task.payload.pdf_file_id }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f4ef2f84-2bce-5b9e-965f-6e79ad054f8c",
+      "name": "PDF attachment",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1380,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://www.googleapis.com/drive/v3/files/'+encodeURIComponent($('Delivery ready').first().json.task.payload.pdf_file_id)+'?alt=media' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "proposal_pdf"
+            }
+          }
+        }
+      },
+      "id": "d6578067-7050-54cf-b81a-a60eed9be989",
+      "name": "Download proposal PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1610,
+        -120
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Delivery ready').first().json.task.payload.to }}",
+        "subject": "={{ ($('Delivery ready').first().json.task.send_mode==='LIVE'?'':'[TEST] ')+$('Delivery ready').first().json.task.payload.subject }}",
+        "emailType": "text",
+        "message": "={{ $('Delivery ready').first().json.task.payload.body }}",
+        "options": {
+          "appendAttribution": false,
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "proposal_pdf"
+              }
+            ]
+          }
+        }
+      },
+      "id": "6e7aa1f3-e3ac-57fb-b14b-cc993c3b6b26",
+      "name": "Send proposal email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1880,
+        -120
+      ],
+      "onError": "continueErrorOutput",
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Delivery ready').first().json.task.payload.to }}",
+        "subject": "={{ ($('Delivery ready').first().json.task.send_mode==='LIVE'?'':'[TEST] ')+$('Delivery ready').first().json.task.payload.subject }}",
+        "emailType": "text",
+        "message": "={{ $('Delivery ready').first().json.task.payload.body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "5ff8e72e-ae5e-54e9-8032-24d7cfddb8ca",
+      "name": "Send plain email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1880,
+        120
+      ],
+      "onError": "continueErrorOutput",
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "jsCode": "if(!$json.id)throw new Error('Gmail returned no message ID. Inspect Sent mail before retrying.');return [{json:{ok:true,provider_id:$json.id}}];"
+      },
+      "id": "79bb7b2f-b3dd-5284-9ed9-eac3167de0f5",
+      "name": "Email accepted",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Connection settings').first().json.api_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({token:$('Connection settings').first().json.api_token,type:\"finish_delivery\",request_id:'n8n:'+$execution.id+':finish_delivery'+':'+$itemIndex,payload:({...$json,delivery_id:$('Delivery ready').first().json.task.delivery_id,claim_token:$('Delivery ready').first().json.task.claim_token}),actor:'n8n'}) }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "c7e367ba-a82d-519f-98b9-0a8edd2825fd",
+      "name": "Record outcome",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2750,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "if(!$json.ok)throw new Error($json.error||'Solar API failed');\nreturn [{json:$json.result||{ok:true}}];"
+      },
+      "id": "414c3c8e-4d58-5e81-b153-4a8aaf1a8d5f",
+      "name": "Outcome saved",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2980,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{ok:false,error_message:String($json.error?.message||$json.message||'Provider request failed; verify before retrying.').slice(0,500)}}];"
+      },
+      "id": "27087fe0-774c-5982-a524-9be86d865315",
+      "name": "Provider failed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2500,
+        320
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Connection settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run once": {
+      "main": [
+        [
+          {
+            "node": "Connection settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Connection settings": {
+      "main": [
+        [
+          {
+            "node": "Claim delivery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim delivery": {
+      "main": [
+        [
+          {
+            "node": "Claim available",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim available": {
+      "main": [
+        [
+          {
+            "node": "Begin delivery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Begin delivery": {
+      "main": [
+        [
+          {
+            "node": "Delivery ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delivery ready": {
+      "main": [
+        [
+          {
+            "node": "PDF attachment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send proposal email": {
+      "main": [
+        [
+          {
+            "node": "Email accepted",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Provider failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send plain email": {
+      "main": [
+        [
+          {
+            "node": "Email accepted",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Provider failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PDF attachment": {
+      "main": [
+        [
+          {
+            "node": "Download proposal PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send plain email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download proposal PDF": {
+      "main": [
+        [
+          {
+            "node": "Send proposal email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Provider failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record outcome": {
+      "main": [
+        [
+          {
+            "node": "Outcome saved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Provider failed": {
+      "main": [
+        [
+          {
+            "node": "Record outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email accepted": {
+      "main": [
+        [
+          {
+            "node": "Record outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata"
+  },
+  "pinData": {},
+  "tags": []
+}

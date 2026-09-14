@@ -1,0 +1,665 @@
+{
+  "name": "Solar V2 · 04 · Site visit calendar",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 04 · Site visit calendar\nClaims one calendar task per run. Uses stable event IDs for create/update/cancel. TEST requires a separate calendar. No attendees are invited automatically. Select the same Calendar credential in all four Calendar HTTP nodes.\n\nImport inactive. Set Connection settings, then select your Google credentials. V2_Config starts TEST / automation No. Read CONNECTING.md before testing.",
+        "height": 260,
+        "width": 620
+      },
+      "id": "b92d9ac3-7b09-5631-a74b-9575d1070c09",
+      "name": "Read first",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -350
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/5 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "2495a65b-a1a6-5068-b02d-32f93eb9b170",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "1c8efc6d-9775-5860-af83-c48952dfe448",
+      "name": "Run once",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        170
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Configure these two values after deploying the Apps Script bridge.\n// Keep configured exports private: this field contains an integration secret.\nconst api_url = 'https://script.google.com/macros/s/REPLACE_DEPLOYMENT_ID/exec';\nconst api_token = 'REPLACE_WITH_SCRIPT_PROPERTY_TOKEN';\nconst use_ai = false; // Deliberately off. No AI credential needed for rules.\nreturn $input.all().map((item,index)=>({json:{...item.json,api_url,api_token,use_ai},pairedItem:{item:index}}));"
+      },
+      "id": "9986b0ee-3125-52a6-9834-e646f12e7472",
+      "name": "Connection settings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        230,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Connection settings').first().json.api_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({token:$('Connection settings').first().json.api_token,type:\"claim_delivery\",request_id:'n8n:'+$execution.id+':claim_delivery'+':'+$itemIndex,payload:{\"kind\": \"calendar\"},actor:'n8n'}) }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "97f18281-cf21-5be5-9539-b4df79abe331",
+      "name": "Claim delivery",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "if(!$json.ok)throw new Error($json.error||'Solar API failed');\nif(!$json.result?.task)return [];\nreturn [{json:{task:$json.result.task}}];"
+      },
+      "id": "84c9bcba-1336-5102-82e8-3c6c5ca34da5",
+      "name": "Claim available",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        690,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Connection settings').first().json.api_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({token:$('Connection settings').first().json.api_token,type:\"begin_delivery\",request_id:'n8n:'+$execution.id+':begin_delivery'+':'+$itemIndex,payload:({delivery_id:$json.task.delivery_id,claim_token:$json.task.claim_token}),actor:'n8n'}) }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "4fa80fef-e6d6-589f-9067-d4f73a3c1bc9",
+      "name": "Begin delivery",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "if(!$json.ok)throw new Error($json.error||'Solar API failed');\nif(!$json.result?.task)return [];\nreturn [{json:{task:$json.result.task}}];"
+      },
+      "id": "ae00a3fb-2215-5c3c-8106-be67a89fc177",
+      "name": "Delivery ready",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1150,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const t=$json.task,v=t.payload.visit;const event_id='solar'+v.site_visit_id.replace(/[^a-f0-9]/gi,'').toLowerCase();const collection='https://www.googleapis.com/calendar/v3/calendars/'+encodeURIComponent(t.payload.calendar_id)+'/events';return [{json:{event_id,collection,url:collection+'/'+event_id,operation:t.payload.operation,body:{id:event_id,summary:(t.send_mode==='LIVE'?'':'[TEST] ')+'Solar site visit · '+v.client_name,description:'Engineer: '+v.assigned_engineer+'\\nDocuments: '+(v.required_documents||'')+'\\n'+(v.visit_notes||''),start:{dateTime:v.starts_at,timeZone:'Asia/Kolkata'},end:{dateTime:v.ends_at,timeZone:'Asia/Kolkata'}}}}];"
+      },
+      "id": "33b405a9-bbb6-5a83-8692-3ab1bbf0d35b",
+      "name": "Calendar request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1380,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8e6705a2-0259-4087-bd51-a76e3424a52f",
+              "leftValue": "={{ $json.operation === 'cancel' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8a47337a-e2fd-5fdc-aa33-9b82e657687f",
+      "name": "Cancel event",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1610,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "={{ $('Calendar request').first().json.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "d10c291a-7ece-58eb-842b-720cb51775ba",
+      "name": "Delete calendar event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1880,
+        -240
+      ],
+      "onError": "continueErrorOutput",
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Calendar request').first().json.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "ed619fa2-669e-5f5f-8266-edb3ec35d1f5",
+      "name": "Find calendar event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1840,
+        90
+      ],
+      "onError": "continueErrorOutput",
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "jsCode": "if(![200,404].includes($json.statusCode))throw new Error('Calendar lookup failed: '+$json.statusCode);return $input.all();"
+      },
+      "id": "2bc333ac-7da0-55b3-a289-384b44f406b8",
+      "name": "Validate calendar lookup",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2060,
+        90
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d1c6b8f5-8600-4adc-9bd8-25ba1f2082af",
+              "leftValue": "={{ $json.statusCode === 404 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8ad6ec9b-4e64-5304-8fd4-13d0dc67b7fc",
+      "name": "Event missing",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2280,
+        90
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Calendar request').first().json.collection }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Calendar request').first().json.body }}"
+      },
+      "id": "7bc70858-66a7-55d2-8020-78ec2cc693e8",
+      "name": "Create calendar event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2500,
+        -70
+      ],
+      "onError": "continueErrorOutput",
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Calendar request').first().json.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Calendar request').first().json.body }}"
+      },
+      "id": "ed2b63b2-46d8-56f1-ad63-8f8bd3ecb8bf",
+      "name": "Update calendar event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2500,
+        130
+      ],
+      "onError": "continueErrorOutput",
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "jsCode": "const cancel=$('Calendar request').first().json.operation==='cancel';const status=$json.statusCode;const ok=cancel?[200,204,404,410].includes(status):[200,201].includes(status);return [{json:{ok,provider_id:$('Calendar request').first().json.event_id,error_message:ok?'':'Calendar HTTP '+status+': '+JSON.stringify($json.body?.error||{}).slice(0,400)}}];"
+      },
+      "id": "c2db2ae5-e338-526a-9755-2c2b49f6fa24",
+      "name": "Calendar outcome",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2750,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Connection settings').first().json.api_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({token:$('Connection settings').first().json.api_token,type:\"finish_delivery\",request_id:'n8n:'+$execution.id+':finish_delivery'+':'+$itemIndex,payload:({...$json,delivery_id:$('Delivery ready').first().json.task.delivery_id,claim_token:$('Delivery ready').first().json.task.claim_token}),actor:'n8n'}) }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "67594fc8-faa5-5e07-8d31-f1b4dd89562b",
+      "name": "Record outcome",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3020,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "if(!$json.ok)throw new Error($json.error||'Solar API failed');\nreturn [{json:$json.result||{ok:true}}];"
+      },
+      "id": "9a18ebfe-5203-5ae7-a73d-2119be037e3f",
+      "name": "Outcome saved",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3250,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{ok:false,error_message:String($json.error?.message||$json.message||'Provider request failed; verify before retrying.').slice(0,500)}}];"
+      },
+      "id": "605b015b-26a4-5e3c-b377-34a128f44e69",
+      "name": "Provider failed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2770,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Connection settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run once": {
+      "main": [
+        [
+          {
+            "node": "Connection settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Connection settings": {
+      "main": [
+        [
+          {
+            "node": "Claim delivery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim delivery": {
+      "main": [
+        [
+          {
+            "node": "Claim available",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim available": {
+      "main": [
+        [
+          {
+            "node": "Begin delivery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Begin delivery": {
+      "main": [
+        [
+          {
+            "node": "Delivery ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delivery ready": {
+      "main": [
+        [
+          {
+            "node": "Calendar request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calendar request": {
+      "main": [
+        [
+          {
+            "node": "Cancel event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete calendar event": {
+      "main": [
+        [
+          {
+            "node": "Calendar outcome",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Provider failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find calendar event": {
+      "main": [
+        [
+          {
+            "node": "Validate calendar lookup",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Provider failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancel event": {
+      "main": [
+        [
+          {
+            "node": "Delete calendar event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Find calendar event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate calendar lookup": {
+      "main": [
+        [
+          {
+            "node": "Event missing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create calendar event": {
+      "main": [
+        [
+          {
+            "node": "Calendar outcome",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Provider failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update calendar event": {
+      "main": [
+        [
+          {
+            "node": "Calendar outcome",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Provider failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Event missing": {
+      "main": [
+        [
+          {
+            "node": "Create calendar event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update calendar event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record outcome": {
+      "main": [
+        [
+          {
+            "node": "Outcome saved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Provider failed": {
+      "main": [
+        [
+          {
+            "node": "Record outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calendar outcome": {
+      "main": [
+        [
+          {
+            "node": "Record outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata"
+  },
+  "pinData": {},
+  "tags": []
+}

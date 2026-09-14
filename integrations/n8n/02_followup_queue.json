@@ -1,0 +1,155 @@
+{
+  "name": "Solar V2 · 02 · Follow-up queue",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 02 · Follow-up queue\nEvery 15 minutes, queue due Email follow-ups whose automation_enabled is Yes. Manual tasks stay on the dashboard. Stopped, completed and closed enquiries are excluded.\n\nImport inactive. Set Connection settings, then select your Google credentials. V2_Config starts TEST / automation No. Read CONNECTING.md before testing.",
+        "height": 260,
+        "width": 620
+      },
+      "id": "1b1c6567-02db-51c0-a0e7-18901161c86c",
+      "name": "Read first",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -350
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/15 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "0b235259-a815-5e7f-bc79-40339a1525f1",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "dfa95c88-47e7-5164-a0ae-c5632ba0a927",
+      "name": "Run once",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        170
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Configure these two values after deploying the Apps Script bridge.\n// Keep configured exports private: this field contains an integration secret.\nconst api_url = 'https://script.google.com/macros/s/REPLACE_DEPLOYMENT_ID/exec';\nconst api_token = 'REPLACE_WITH_SCRIPT_PROPERTY_TOKEN';\nconst use_ai = false; // Deliberately off. No AI credential needed for rules.\nreturn $input.all().map((item,index)=>({json:{...item.json,api_url,api_token,use_ai},pairedItem:{item:index}}));"
+      },
+      "id": "ce805419-3d75-5507-b378-d9d1e5161dfd",
+      "name": "Connection settings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        230,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Connection settings').first().json.api_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({token:$('Connection settings').first().json.api_token,type:\"queue_followups\",request_id:'n8n:'+$execution.id+':queue_followups'+':'+$itemIndex,payload:{},actor:'n8n'}) }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "d53592e9-bc07-5aef-95bd-170d7c299817",
+      "name": "Queue due follow-ups",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "if(!$json.ok)throw new Error($json.error||'Solar API failed');\nreturn [{json:$json.result||{ok:true}}];"
+      },
+      "id": "a4572458-4464-5a59-8941-dfaf7dbabbf0",
+      "name": "Queue result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        690,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Connection settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run once": {
+      "main": [
+        [
+          {
+            "node": "Connection settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Connection settings": {
+      "main": [
+        [
+          {
+            "node": "Queue due follow-ups",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Queue due follow-ups": {
+      "main": [
+        [
+          {
+            "node": "Queue result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata"
+  },
+  "pinData": {},
+  "tags": []
+}

@@ -1,0 +1,367 @@
+{
+  "name": "Solar V2 · 05 · Proposal documents",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 05 · Proposal documents\nClaims one proposal version, creates a private Google Doc and PDF through Apps Script, then records the links. Sharing remains a separate operator action. Set PROPOSAL_FOLDER_ID and authorize the bridge first.\n\nImport inactive. Set Connection settings, then select your Google credentials. V2_Config starts TEST / automation No. Read CONNECTING.md before testing.",
+        "height": 260,
+        "width": 620
+      },
+      "id": "187b1b4e-3051-572c-9860-4066bb57c9fb",
+      "name": "Read first",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -350
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/5 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "a4ccbd49-dbec-5065-ac5c-4c86a97f6240",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "4a48da23-0ca6-5e38-aad0-cb89bd856c68",
+      "name": "Run once",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        170
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Configure these two values after deploying the Apps Script bridge.\n// Keep configured exports private: this field contains an integration secret.\nconst api_url = 'https://script.google.com/macros/s/REPLACE_DEPLOYMENT_ID/exec';\nconst api_token = 'REPLACE_WITH_SCRIPT_PROPERTY_TOKEN';\nconst use_ai = false; // Deliberately off. No AI credential needed for rules.\nreturn $input.all().map((item,index)=>({json:{...item.json,api_url,api_token,use_ai},pairedItem:{item:index}}));"
+      },
+      "id": "9c0193f7-cfd2-55ea-8516-395a613cbf7a",
+      "name": "Connection settings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        230,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Connection settings').first().json.api_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({token:$('Connection settings').first().json.api_token,type:\"claim_delivery\",request_id:'n8n:'+$execution.id+':claim_delivery'+':'+$itemIndex,payload:{\"kind\": \"document\"},actor:'n8n'}) }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "f3293be8-b11b-518f-89b2-de15074a99f2",
+      "name": "Claim delivery",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "if(!$json.ok)throw new Error($json.error||'Solar API failed');\nif(!$json.result?.task)return [];\nreturn [{json:{task:$json.result.task}}];"
+      },
+      "id": "81be37ef-2503-569c-bec7-8d60f86bb6d8",
+      "name": "Claim available",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        690,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Connection settings').first().json.api_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({token:$('Connection settings').first().json.api_token,type:\"begin_delivery\",request_id:'n8n:'+$execution.id+':begin_delivery'+':'+$itemIndex,payload:({delivery_id:$json.task.delivery_id,claim_token:$json.task.claim_token}),actor:'n8n'}) }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "8213223e-5e5c-5c74-8c85-b49c10b9863e",
+      "name": "Begin delivery",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "if(!$json.ok)throw new Error($json.error||'Solar API failed');\nif(!$json.result?.task)return [];\nreturn [{json:{task:$json.result.task}}];"
+      },
+      "id": "a4a994fd-bf72-56d1-babf-b05b6e8d4b4f",
+      "name": "Delivery ready",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1150,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Connection settings').first().json.api_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({token:$('Connection settings').first().json.api_token,type:\"generate_document\",request_id:'n8n:'+$execution.id+':generate_document'+':'+$itemIndex,payload:({delivery_id:$('Delivery ready').first().json.task.delivery_id,claim_token:$('Delivery ready').first().json.task.claim_token}),actor:'n8n'}) }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "b13c5c16-fb2e-5150-9f2a-f01a47934946",
+      "name": "Generate private document",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1380,
+        0
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "if(!$json.ok)return [{json:{ok:false,error_message:$json.error||'Document generation failed'}}];const r=$json.result;if(!r?.provider_id||!r.pdf_url||!r.document_url)throw new Error('Document response incomplete. Inspect Drive before retrying.');return [{json:{...r,ok:true}}];"
+      },
+      "id": "98957839-4939-599d-8da4-676e5e690f81",
+      "name": "Document outcome",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1610,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Connection settings').first().json.api_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({token:$('Connection settings').first().json.api_token,type:\"finish_delivery\",request_id:'n8n:'+$execution.id+':finish_delivery'+':'+$itemIndex,payload:({...$json,delivery_id:$('Delivery ready').first().json.task.delivery_id,claim_token:$('Delivery ready').first().json.task.claim_token}),actor:'n8n'}) }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "56e45288-0dc0-5b46-a898-cc23367922c8",
+      "name": "Record outcome",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2750,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "if(!$json.ok)throw new Error($json.error||'Solar API failed');\nreturn [{json:$json.result||{ok:true}}];"
+      },
+      "id": "2170b5f0-5b63-5909-8561-9de852fef932",
+      "name": "Outcome saved",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2980,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{ok:false,error_message:String($json.error?.message||$json.message||'Provider request failed; verify before retrying.').slice(0,500)}}];"
+      },
+      "id": "72687362-7bd0-5697-8c40-a73d4f304446",
+      "name": "Provider failed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2500,
+        320
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Connection settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run once": {
+      "main": [
+        [
+          {
+            "node": "Connection settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Connection settings": {
+      "main": [
+        [
+          {
+            "node": "Claim delivery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim delivery": {
+      "main": [
+        [
+          {
+            "node": "Claim available",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim available": {
+      "main": [
+        [
+          {
+            "node": "Begin delivery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Begin delivery": {
+      "main": [
+        [
+          {
+            "node": "Delivery ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delivery ready": {
+      "main": [
+        [
+          {
+            "node": "Generate private document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate private document": {
+      "main": [
+        [
+          {
+            "node": "Document outcome",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Provider failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record outcome": {
+      "main": [
+        [
+          {
+            "node": "Outcome saved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Provider failed": {
+      "main": [
+        [
+          {
+            "node": "Record outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Document outcome": {
+      "main": [
+        [
+          {
+            "node": "Record outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata"
+  },
+  "pinData": {},
+  "tags": []
+}
