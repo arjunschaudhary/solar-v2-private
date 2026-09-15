@@ -5,6 +5,7 @@ Private Solar EPC CRM and operations application built by Arjun Choudhary. It ma
 ## Current status
 
 - Private production deployment on Vercel
+- GitHub `main` connected to automatic Vercel production deployments
 - Access protected by Vercel Authentication for all deployments
 - Live business data stored in Google Sheets through an Apps Script bridge
 - External work executed by six inactive-by-default n8n workflows
