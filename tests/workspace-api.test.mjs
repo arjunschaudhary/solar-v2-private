@@ -7,6 +7,7 @@ const integrationKeys = [
   "SOLAR_APPS_SCRIPT_URL",
   "SOLAR_AUTOMATION_TOKEN",
   "SOLAR_OPERATOR_EMAIL",
+  "SOLAR_PUBLIC_SHOWCASE",
 ];
 
 const originalEnvironment = Object.fromEntries(
@@ -57,6 +58,7 @@ function configureIntegration() {
     "https://script.google.com/macros/s/example/exec";
   process.env.SOLAR_AUTOMATION_TOKEN = "test-token";
   process.env.SOLAR_OPERATOR_EMAIL = "operator@example.com";
+  delete process.env.SOLAR_PUBLIC_SHOWCASE;
 }
 
 function postRequest(data, requestOrigin = origin) {
