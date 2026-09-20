@@ -164,7 +164,40 @@ test("approved actions are forwarded with the private operator", async () => {
   assert.equal(forwardedBody.type, "update_lead");
 });
 
-test("public showcase remains readable but blocks workspace changes", async () => {\n  configureIntegration();\n  process.env.SOLAR_PUBLIC_SHOWCASE = "Yes";\n\n  globalThis.fetch = async (_url, options) => {\n    const body = JSON.parse(options.body);\n    assert.equal(body.type, "snapshot");\n\n    return Response.json({\n      ok: true,\n      state: { version: 9, leads: [] },\n    });\n  };\n\n  const snapshot = await GET();\n  const snapshotBody = await snapshot.json();\n\n  assert.equal(snapshot.status, 200);\n  assert.equal(snapshotBody.mode, "showcase");\n\n  const write = await POST(\n    postRequest({\n      type: "update_lead",\n      request_id: "showcase-write-attempt",\n      expected_version: 9,\n      payload: { lead_id: "SEPC-TEST" },\n    }),\n  );\n\n  assert.equal(write.status, 403);\n  assert.match((await write.json()).error, /read-only/i);\n});\n\ntest("worker-only actions remain unavailable to the browser", async () => {
+test("public showcase remains readable but blocks workspace changes", async () => {
+  configureIntegration();
+  process.env.SOLAR_PUBLIC_SHOWCASE = "Yes";
+
+  globalThis.fetch = async (_url, options) => {
+    const body = JSON.parse(options.body);
+    assert.equal(body.type, "snapshot");
+
+    return Response.json({
+      ok: true,
+      state: { version: 9, leads: [] },
+    });
+  };
+
+  const snapshot = await GET();
+  const snapshotBody = await snapshot.json();
+
+  assert.equal(snapshot.status, 200);
+  assert.equal(snapshotBody.mode, "showcase");
+
+  const write = await POST(
+    postRequest({
+      type: "update_lead",
+      request_id: "showcase-write-attempt",
+      expected_version: 9,
+      payload: { lead_id: "SEPC-TEST" },
+    }),
+  );
+
+  assert.equal(write.status, 403);
+  assert.match((await write.json()).error, /read-only/i);
+});
+
+test("worker-only actions remain unavailable to the browser", async () => {
   configureIntegration();
 
   globalThis.fetch = async () => {
