@@ -7,6 +7,7 @@ const integrationKeys = [
   "SOLAR_APPS_SCRIPT_URL",
   "SOLAR_AUTOMATION_TOKEN",
   "SOLAR_OPERATOR_EMAIL",
+  "SOLAR_PUBLIC_SHOWCASE",
 ];
 
 const originalEnvironment = Object.fromEntries(
@@ -57,6 +58,7 @@ function configureIntegration() {
     "https://script.google.com/macros/s/example/exec";
   process.env.SOLAR_AUTOMATION_TOKEN = "test-token";
   process.env.SOLAR_OPERATOR_EMAIL = "operator@example.com";
+  delete process.env.SOLAR_PUBLIC_SHOWCASE;
 }
 
 function postRequest(data, requestOrigin = origin) {
@@ -160,6 +162,39 @@ test("approved actions are forwarded with the private operator", async () => {
   assert.equal(forwardedBody.token, "test-token");
   assert.equal(forwardedBody.actor, "operator@example.com");
   assert.equal(forwardedBody.type, "update_lead");
+});
+
+test("public showcase remains readable but blocks workspace changes", async () => {
+  configureIntegration();
+  process.env.SOLAR_PUBLIC_SHOWCASE = "Yes";
+
+  globalThis.fetch = async (_url, options) => {
+    const body = JSON.parse(options.body);
+    assert.equal(body.type, "snapshot");
+
+    return Response.json({
+      ok: true,
+      state: { version: 9, leads: [] },
+    });
+  };
+
+  const snapshot = await GET();
+  const snapshotBody = await snapshot.json();
+
+  assert.equal(snapshot.status, 200);
+  assert.equal(snapshotBody.mode, "showcase");
+
+  const write = await POST(
+    postRequest({
+      type: "update_lead",
+      request_id: "showcase-write-attempt",
+      expected_version: 9,
+      payload: { lead_id: "SEPC-TEST" },
+    }),
+  );
+
+  assert.equal(write.status, 403);
+  assert.match((await write.json()).error, /read-only/i);
 });
 
 test("worker-only actions remain unavailable to the browser", async () => {

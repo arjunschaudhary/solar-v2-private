@@ -76,6 +76,9 @@ async function bridge(action: unknown) {
   return data;
 }
 
+const publicShowcase = () =>
+  process.env.SOLAR_PUBLIC_SHOWCASE?.trim() === "Yes";
+
 const allowedActions = [
   "create_lead",
   "update_lead",
@@ -94,7 +97,7 @@ export async function GET() {
 
     return reply({
       state: data.state,
-      mode: "sheets",
+      mode: publicShowcase() ? "showcase" : "sheets",
     });
   } catch (error) {
     return reply(
@@ -110,6 +113,10 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (publicShowcase()) {
+    return reply({ error: "This public showcase is read-only." }, 403);
+  }
+
   const origin = request.headers.get("origin");
 
   if (origin !== new URL(request.url).origin) {
