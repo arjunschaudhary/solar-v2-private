@@ -62,7 +62,7 @@ SOLAR_AUTOMATION_TOKEN=
 SOLAR_OPERATOR_EMAIL=
 ```
 
-The first two should be Secret values. The operator email may be Config. Do not prefix any of them with `NEXT_PUBLIC_`.
+The first two should be Secret values. The operator email and showcase flag may be Config. Set `SOLAR_PUBLIC_SHOWCASE=Yes` only while production is intentionally public; this blocks all browser write actions. Do not prefix any of them with `NEXT_PUBLIC_`.
 
 ## Verification
 
