@@ -162,7 +162,7 @@ test("approved actions are forwarded with the private operator", async () => {
   assert.equal(forwardedBody.type, "update_lead");
 });
 
-test("worker-only actions remain unavailable to the browser", async () => {
+test("public showcase remains readable but blocks workspace changes", async () => {\n  configureIntegration();\n  process.env.SOLAR_PUBLIC_SHOWCASE = "Yes";\n\n  globalThis.fetch = async (_url, options) => {\n    const body = JSON.parse(options.body);\n    assert.equal(body.type, "snapshot");\n\n    return Response.json({\n      ok: true,\n      state: { version: 9, leads: [] },\n    });\n  };\n\n  const snapshot = await GET();\n  const snapshotBody = await snapshot.json();\n\n  assert.equal(snapshot.status, 200);\n  assert.equal(snapshotBody.mode, "showcase");\n\n  const write = await POST(\n    postRequest({\n      type: "update_lead",\n      request_id: "showcase-write-attempt",\n      expected_version: 9,\n      payload: { lead_id: "SEPC-TEST" },\n    }),\n  );\n\n  assert.equal(write.status, 403);\n  assert.match((await write.json()).error, /read-only/i);\n});\n\ntest("worker-only actions remain unavailable to the browser", async () => {
   configureIntegration();
 
   globalThis.fetch = async () => {
