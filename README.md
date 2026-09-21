@@ -1,12 +1,12 @@
 # Solar EPC Operations Command Center · V2
 
-Private Solar EPC CRM and operations application built by Arjun Choudhary. It manages the operational journey from enquiry capture through follow-ups, site visits, proposals, delivery tracking, acceptance, and conversion.
+Solar EPC CRM and operations application that manages the journey from enquiry capture through follow-ups, site visits, proposals, delivery tracking, acceptance, and conversion.
 
 ## Current status
 
-- Private production deployment on Vercel
+- Public production showcase on Vercel using fictional data
 - GitHub `main` connected to automatic Vercel production deployments
-- Access protected by Vercel Authentication for all deployments
+- Public showcase blocks browser write actions; integration testing uses protected deployments
 - Live business data stored in Google Sheets through an Apps Script bridge
 - External work executed by six inactive-by-default n8n workflows
 - Gmail, Google Calendar, Drive/Docs, and PDF proposal delivery tested end to end
@@ -30,7 +30,7 @@ Private Solar EPC CRM and operations application built by Arjun Choudhary. It ma
 ```mermaid
 flowchart TD
   Form["Google Form"] --> Intake["n8n intake"]
-  App["Private Vercel app"] --> API["Protected server API"]
+  App["Vercel app"] --> API["Protected server API"]
   Intake --> Bridge["Apps Script bridge"]
   API --> Bridge
   Bridge --> Sheets["Google Sheets"]
