@@ -10,6 +10,13 @@ export type AgentAnswer={answer:string;traces:AgentTrace[];sources:string[];prov
 export const solarModelName=()=>process.env.SOLAR_AI_MODEL?.trim()||'gemini-3.5-flash';
 export const solarAIConfigured=()=>Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim());
 const unique=(items:string[])=>[...new Set(items)];
+function transientProviderFailure(error:unknown):boolean{
+ const candidate=error as {statusCode?:number;status?:number;message?:string;cause?:unknown}|null;
+ const status=candidate?.statusCode??candidate?.status;
+ if(status===429||status===500||status===502||status===503||status===504||status===529)return true;
+ if(typeof candidate?.message==='string'&&/high demand|overloaded|temporarily unavailable|resource exhausted|rate limit|quota exceeded|timeout|timed out/i.test(candidate.message))return true;
+ return candidate?.cause?transientProviderFailure(candidate.cause):false;
+}
 
 function tracked(name:string,traces:AgentTrace[],run:()=>ToolResult){
  const started=Date.now();
@@ -33,8 +40,14 @@ export async function answerWithSolarOps(state:Workspace,question:string):Promis
   search_solar_sop:tool({description:'Retrieve relevant synthetic Solar SOP and policy passages for process questions.',inputSchema:z.object({query:z.string()}),execute:async({query})=>tracked('search_solar_sop',traces,()=>knowledgeSearch(query))}),
  };
  const agent=new ToolLoopAgent({model:google(solarModelName()),instructions:`You are SolarOps AI, a read-only operations assistant. Answer only from tool results. Resolve a customer with search_customers before using an ID unless the ID is explicitly present. Use operational tools for claims about customers or projects and search_solar_sop for process guidance. Distinguish recorded facts from inferences. Never expose internal reasoning. Never claim that you called, emailed, scheduled, changed, approved, or executed anything. Any next action must be labeled a recommendation and say it was not executed. Be concise, specific, and use markdown. End with a short Sources line naming the tool-provided source labels.`,tools,stopWhen:stepCountIs(8)});
- const result=await agent.generate({prompt:question});
- return {answer:result.text||'I could not produce a grounded answer from the available read-only data.',traces,sources:unique(traces.flatMap(x=>x.sources)),provider:{configured:true,name:'Google Gemini',model:solarModelName()},readonly:true};
+ try{
+  const result=await agent.generate({prompt:question});
+  return {answer:result.text||'I could not produce a grounded answer from the available read-only data.',traces,sources:unique(traces.flatMap(x=>x.sources)),provider:{configured:true,name:'Google Gemini',model:solarModelName()},readonly:true};
+ }catch(error){
+  if(!transientProviderFailure(error))throw error;
+  const fallback=answerWithGroundedFallback(state,question);
+  return {...fallback,answer:`Gemini is temporarily unavailable. This answer uses the read-only demo records and SOPs.\n\n${fallback.answer}`,provider:{configured:true,name:'Grounded demo fallback (Gemini unavailable)',model:fallback.provider.model}};
+ }
 }
 
 function resolveCustomer(state:Workspace,question:string){

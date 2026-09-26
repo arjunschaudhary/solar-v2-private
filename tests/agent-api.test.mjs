@@ -29,6 +29,18 @@ test('public agent is grounded in synthetic data without calling Sheets',async()
  assert.match(body.answer,/Not executed/i);assert.match(body.answer,/overdue/i);
 });
 
+test('Gemini overload returns a labeled grounded answer with real read-only tool traces',async()=>{
+ process.env.SOLAR_PUBLIC_SHOWCASE='Yes';process.env.GOOGLE_GENERATIVE_AI_API_KEY='test-only-key';
+ globalThis.fetch=async()=>new Response(JSON.stringify({error:{code:503,message:'The model is currently experiencing high demand.',status:'UNAVAILABLE'}}),{status:503,headers:{'Content-Type':'application/json'}});
+ const response=await route.POST(request('Which projects are delayed?'));
+ const body=await response.json();
+ assert.equal(response.status,200);assert.equal(body.readonly,true);
+ assert.equal(body.provider.configured,true);assert.match(body.provider.name,/fallback/i);
+ assert.match(body.answer,/Gemini is temporarily unavailable/i);
+ assert.match(body.answer,/delayed or blocked projects/i);
+ assert.deepEqual(body.traces.map(trace=>trace.tool),['list_delayed_projects']);
+});
+
 test('agent API rejects cross-origin requests before reading data',async()=>{
  const response=await route.POST(request('Show delayed projects','https://unrelated.example'));
  assert.equal(response.status,403);assert.match((await response.json()).error,/origin/i);

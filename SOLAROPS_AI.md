@@ -49,6 +49,6 @@ Tool output includes source labels and safe summaries for the activity panel. St
 
 ## Model and retrieval design
 
-The provider path uses Vercel AI SDK `ToolLoopAgent` with Google Gemini. `gemini-3.5-flash` is the default and can be changed with `SOLAR_AI_MODEL`. Without `GOOGLE_GENERATIVE_AI_API_KEY`, the API uses a deterministic grounded engine that calls the same read-only data and SOP functions.
+The provider path uses Vercel AI SDK `ToolLoopAgent` with Google Gemini. `gemini-3.5-flash` is the default and can be changed with `SOLAR_AI_MODEL`. Without `GOOGLE_GENERATIVE_AI_API_KEY`, the API uses a deterministic grounded engine that calls the same read-only data and SOP functions. If Gemini returns a temporary capacity, timeout, or rate-limit failure, the agent uses that grounded engine for the request and explicitly labels the fallback. Configuration/authentication failures remain visible as errors.
 
 No Supabase project was created. The initial SOP corpus has eight small synthetic documents, so local version-controlled lexical retrieval is simpler, free, reproducible, and adequate. A separate vector store becomes justified when the corpus is materially larger, needs frequent non-code publishing, requires permissions by document, or retrieval quality cannot meet evaluation targets.
