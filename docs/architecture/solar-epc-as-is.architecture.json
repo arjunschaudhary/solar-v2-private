@@ -1,0 +1,475 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Solar EPC \u00b7 existing operational architecture",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1330,
+      820
+    ],
+    "repository": {
+      "url": "https://github.com/arjunschaudhary/solar-v2-private",
+      "provider": "github",
+      "revision": "74318359a31c99d3cb1b25ba93aa3ff90e10de67"
+    },
+    "views": [
+      {
+        "id": "enquiry",
+        "label": "Enquiry intake",
+        "focus": [
+          "form",
+          "n8n",
+          "bridge",
+          "sheets",
+          "queue"
+        ],
+        "note": "A Google Form row triggers the separate n8n intake workflow, which writes through Apps Script."
+      },
+      {
+        "id": "dashboard",
+        "label": "Dashboard data",
+        "focus": [
+          "browser",
+          "frontend",
+          "server",
+          "bridge",
+          "sheets"
+        ],
+        "note": "The browser calls the Vercel API; only the server holds the Apps Script token."
+      },
+      {
+        "id": "email",
+        "label": "Email follow-up",
+        "focus": [
+          "queue",
+          "n8n",
+          "bridge",
+          "gmail"
+        ],
+        "note": "Scheduled workers claim queued work through Apps Script before Gmail delivery."
+      },
+      {
+        "id": "site",
+        "label": "Site visit",
+        "focus": [
+          "frontend",
+          "server",
+          "bridge",
+          "queue",
+          "n8n",
+          "calendar"
+        ],
+        "note": "A saved visit queues Calendar delivery; it is not a synchronous Calendar call."
+      },
+      {
+        "id": "proposal",
+        "label": "Proposal",
+        "focus": [
+          "frontend",
+          "server",
+          "bridge",
+          "queue",
+          "n8n",
+          "drive",
+          "gmail"
+        ],
+        "note": "Document generation uses Apps Script and Drive; a later queued email uses Gmail."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "browser",
+      "type": "external",
+      "label": "User / Browser",
+      "sublabel": "operator or public demo",
+      "pos": [
+        30,
+        270
+      ],
+      "size": [
+        150,
+        68
+      ]
+    },
+    {
+      "id": "frontend",
+      "type": "frontend",
+      "label": "Next.js UI",
+      "sublabel": "Vercel \u00b7 React",
+      "pos": [
+        220,
+        270
+      ],
+      "size": [
+        150,
+        68
+      ],
+      "sources": [
+        {
+          "path": "app/workspace.tsx",
+          "line": 28,
+          "end_line": 43,
+          "label": "workspace UI"
+        }
+      ]
+    },
+    {
+      "id": "server",
+      "type": "backend",
+      "label": "Workspace API",
+      "sublabel": "GET / POST",
+      "pos": [
+        430,
+        270
+      ],
+      "size": [
+        150,
+        68
+      ],
+      "sources": [
+        {
+          "path": "app/api/workspace/route.ts",
+          "line": 15,
+          "end_line": 84,
+          "label": "server route"
+        },
+        {
+          "path": "lib/solar-data.ts",
+          "line": 5,
+          "end_line": 72,
+          "label": "bridge client"
+        }
+      ]
+    },
+    {
+      "id": "bridge",
+      "type": "backend",
+      "label": "Apps Script API",
+      "sublabel": "token + shared rules",
+      "pos": [
+        640,
+        270
+      ],
+      "size": [
+        160,
+        68
+      ],
+      "sources": [
+        {
+          "path": "integrations/apps-script/Bridge.gs",
+          "line": 15,
+          "end_line": 42,
+          "label": "authenticated bridge"
+        },
+        {
+          "path": "lib/solar-core.ts",
+          "line": 27,
+          "end_line": 43,
+          "label": "business rules"
+        }
+      ]
+    },
+    {
+      "id": "sheets",
+      "type": "database",
+      "label": "Google Sheets",
+      "sublabel": "operational tabs",
+      "pos": [
+        870,
+        270
+      ],
+      "size": [
+        160,
+        68
+      ],
+      "sources": [
+        {
+          "path": "integrations/apps-script/Bridge.gs",
+          "line": 44,
+          "end_line": 85,
+          "label": "read + batch write"
+        },
+        {
+          "path": "lib/solar-core.ts",
+          "line": 1,
+          "end_line": 5,
+          "label": "tab mapping"
+        }
+      ]
+    },
+    {
+      "id": "form",
+      "type": "external",
+      "label": "Google Form",
+      "sublabel": "new enquiry row",
+      "pos": [
+        430,
+        545
+      ],
+      "size": [
+        150,
+        68
+      ],
+      "sources": [
+        {
+          "path": "integrations/n8n/01_enquiry_intake.json",
+          "label": "form trigger"
+        }
+      ]
+    },
+    {
+      "id": "n8n",
+      "type": "backend",
+      "label": "n8n workers",
+      "sublabel": "separate schedules",
+      "pos": [
+        640,
+        545
+      ],
+      "size": [
+        150,
+        68
+      ],
+      "sources": [
+        {
+          "path": "integrations/n8n/02_followup_queue.json",
+          "label": "queue schedule"
+        },
+        {
+          "path": "integrations/n8n/03_email_delivery.json",
+          "label": "email worker"
+        },
+        {
+          "path": "integrations/n8n/06_manager_summary.json",
+          "label": "summary schedule"
+        }
+      ]
+    },
+    {
+      "id": "queue",
+      "type": "messagebus",
+      "label": "Delivery_Queue",
+      "sublabel": "Sheet tab \u00b7 pending work",
+      "pos": [
+        870,
+        695
+      ],
+      "size": [
+        160,
+        68
+      ],
+      "sources": [
+        {
+          "path": "lib/solar-core.ts",
+          "line": 36,
+          "end_line": 39,
+          "label": "queue creation"
+        },
+        {
+          "path": "lib/solar-core.ts",
+          "line": 96,
+          "end_line": 119,
+          "label": "claim + guardrails"
+        }
+      ]
+    },
+    {
+      "id": "gmail",
+      "type": "external",
+      "label": "Gmail",
+      "sublabel": "email delivery",
+      "pos": [
+        1110,
+        405
+      ],
+      "size": [
+        150,
+        68
+      ],
+      "sources": [
+        {
+          "path": "integrations/n8n/03_email_delivery.json",
+          "label": "send nodes"
+        }
+      ]
+    },
+    {
+      "id": "calendar",
+      "type": "external",
+      "label": "Google Calendar",
+      "sublabel": "site events",
+      "pos": [
+        1110,
+        545
+      ],
+      "size": [
+        150,
+        68
+      ],
+      "sources": [
+        {
+          "path": "integrations/n8n/04_site_visit_calendar.json",
+          "label": "event worker"
+        }
+      ]
+    },
+    {
+      "id": "drive",
+      "type": "external",
+      "label": "Drive / Docs",
+      "sublabel": "proposal PDF",
+      "pos": [
+        1110,
+        95
+      ],
+      "size": [
+        150,
+        68
+      ],
+      "sources": [
+        {
+          "path": "integrations/apps-script/Bridge.gs",
+          "line": 86,
+          "end_line": 99,
+          "label": "document creation"
+        },
+        {
+          "path": "integrations/n8n/05_proposal_documents.json",
+          "label": "document worker"
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Vercel server boundary",
+      "wraps": [
+        "frontend",
+        "server"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Google operational data",
+      "wraps": [
+        "bridge",
+        "sheets",
+        "queue"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "browser-ui",
+      "from": "browser",
+      "to": "frontend",
+      "label": "HTTPS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "ui-api",
+      "from": "frontend",
+      "to": "server",
+      "label": "/api/workspace",
+      "variant": "emphasis",
+      "labelAt": [
+        400,
+        352
+      ]
+    },
+    {
+      "id": "api-bridge",
+      "from": "server",
+      "to": "bridge",
+      "label": "server-only token",
+      "variant": "security",
+      "labelAt": [
+        610,
+        352
+      ]
+    },
+    {
+      "id": "bridge-sheets",
+      "from": "bridge",
+      "to": "sheets",
+      "label": "snapshot / batch write",
+      "variant": "emphasis",
+      "labelAt": [
+        835,
+        352
+      ]
+    },
+    {
+      "id": "form-worker",
+      "from": "form",
+      "to": "n8n",
+      "label": "new form row",
+      "labelAt": [
+        610,
+        630
+      ]
+    },
+    {
+      "id": "worker-bridge",
+      "from": "n8n",
+      "to": "bridge",
+      "label": "intake / queue / claim API",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "worker-gmail",
+      "from": "n8n",
+      "to": "gmail",
+      "label": "due + summary email",
+      "variant": "dashed"
+    },
+    {
+      "id": "worker-calendar",
+      "from": "n8n",
+      "to": "calendar",
+      "label": "create / update event",
+      "variant": "dashed",
+      "labelAt": [
+        990,
+        630
+      ]
+    },
+    {
+      "id": "bridge-drive",
+      "from": "bridge",
+      "to": "drive",
+      "label": "generate Doc + PDF",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Two independent paths",
+      "items": [
+        "Dashboard: browser \u2192 Vercel API \u2192 Apps Script \u2192 Sheets.",
+        "Automation: n8n \u2192 Apps Script queue claims \u2192 Google services."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Access and trust",
+      "items": [
+        "Public showcase returns synthetic data and refuses writes before requesting the private Sheet.",
+        "The Apps Script token stays on the server; the bridge validates it before reading or changing Sheets."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Operational status",
+      "items": [
+        "The six checked-in n8n exports are inactive templates; live activation is not proven by repository source.",
+        "No frontend call to an n8n webhook is present in the inspected application."
+      ]
+    }
+  ]
+}

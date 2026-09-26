@@ -1,0 +1,269 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "SolarOps AI \u00b7 Priya Sharma question (illustrative fixture)",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1080,
+      760
+    ],
+    "column_fit": "spread",
+    "views": [
+      {
+        "id": "question",
+        "label": "Question + snapshot",
+        "focus": [
+          "user",
+          "ui",
+          "api",
+          "snapshot"
+        ],
+        "note": "The API first loads an allowed synthetic or private snapshot."
+      },
+      {
+        "id": "evidence",
+        "label": "Project evidence",
+        "focus": [
+          "api",
+          "tools",
+          "snapshot"
+        ],
+        "note": "Customer search and project/related-record reads ground the explanation."
+      },
+      {
+        "id": "guidance",
+        "label": "SOP + model",
+        "focus": [
+          "api",
+          "tools",
+          "sop",
+          "model"
+        ],
+        "note": "Relevant synthetic SOP guidance may supplement recorded project facts."
+      },
+      {
+        "id": "reply",
+        "label": "Answer + activity",
+        "focus": [
+          "model",
+          "api",
+          "ui",
+          "activity",
+          "user"
+        ],
+        "note": "The model recommends a next action; activity logs safe metadata only."
+      }
+    ]
+  },
+  "participants": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "User"
+    },
+    {
+      "id": "ui",
+      "type": "frontend",
+      "label": "SolarOps UI"
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "Agent API"
+    },
+    {
+      "id": "snapshot",
+      "type": "database",
+      "label": "Snapshot",
+      "sublabel": "synthetic / Sheets"
+    },
+    {
+      "id": "tools",
+      "type": "backend",
+      "label": "Read tools"
+    },
+    {
+      "id": "sop",
+      "type": "database",
+      "label": "SOP search"
+    },
+    {
+      "id": "model",
+      "type": "external",
+      "label": "Gemini"
+    },
+    {
+      "id": "activity",
+      "type": "database",
+      "label": "Activity",
+      "sublabel": "browser-local"
+    }
+  ],
+  "segments": [
+    {
+      "from": 150,
+      "to": 245,
+      "label": "Question and permitted data"
+    },
+    {
+      "from": 250,
+      "to": 455,
+      "label": "Read-only evidence gathering"
+    },
+    {
+      "from": 460,
+      "to": 645,
+      "label": "Grounded answer and visibility"
+    }
+  ],
+  "messages": [
+    {
+      "id": "ask",
+      "from": "user",
+      "to": "ui",
+      "y": 164,
+      "label": "Why hasn't Priya Sharma's project moved forward?"
+    },
+    {
+      "id": "post",
+      "from": "ui",
+      "to": "api",
+      "y": 190,
+      "label": "POST /api/agent",
+      "variant": "emphasis"
+    },
+    {
+      "id": "load",
+      "from": "api",
+      "to": "snapshot",
+      "y": 218,
+      "label": "load permitted snapshot"
+    },
+    {
+      "id": "state",
+      "from": "snapshot",
+      "to": "api",
+      "y": 246,
+      "label": "synthetic records",
+      "variant": "return"
+    },
+    {
+      "id": "search",
+      "from": "api",
+      "to": "tools",
+      "y": 280,
+      "label": "search_customers"
+    },
+    {
+      "id": "search-data",
+      "from": "tools",
+      "to": "snapshot",
+      "y": 309,
+      "label": "find name / ID"
+    },
+    {
+      "id": "found",
+      "from": "snapshot",
+      "to": "tools",
+      "y": 338,
+      "label": "matched fictional record",
+      "variant": "return"
+    },
+    {
+      "id": "project",
+      "from": "api",
+      "to": "tools",
+      "y": 370,
+      "label": "get_project_status + details"
+    },
+    {
+      "id": "related",
+      "from": "tools",
+      "to": "snapshot",
+      "y": 400,
+      "label": "tasks / survey / proposal"
+    },
+    {
+      "id": "evidence",
+      "from": "snapshot",
+      "to": "api",
+      "y": 430,
+      "label": "recorded blocker evidence",
+      "variant": "return"
+    },
+    {
+      "id": "sop-request",
+      "from": "api",
+      "to": "sop",
+      "y": 469,
+      "label": "search_solar_sop if useful"
+    },
+    {
+      "id": "sop-result",
+      "from": "sop",
+      "to": "api",
+      "y": 499,
+      "label": "relevant synthetic guidance",
+      "variant": "return"
+    },
+    {
+      "id": "generate",
+      "from": "api",
+      "to": "model",
+      "y": 538,
+      "label": "facts + SOP + read-only rules",
+      "variant": "emphasis"
+    },
+    {
+      "id": "draft",
+      "from": "model",
+      "to": "api",
+      "y": 568,
+      "label": "explanation + recommendation",
+      "variant": "return"
+    },
+    {
+      "id": "reply",
+      "from": "api",
+      "to": "ui",
+      "y": 606,
+      "label": "answer + sources + tool traces",
+      "variant": "return"
+    },
+    {
+      "id": "log",
+      "from": "ui",
+      "to": "activity",
+      "y": 637,
+      "label": "safe metadata only",
+      "variant": "dashed"
+    },
+    {
+      "id": "show",
+      "from": "ui",
+      "to": "user",
+      "y": 668,
+      "label": "show answer; no write executed",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "Illustrative name",
+      "items": [
+        "Priya Sharma is a fictional teaching fixture, not a customer in the current public demo.",
+        "Today a real unmatched query should ask for clarification instead of inventing project facts."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Read-only outcome",
+      "items": [
+        "A matched record can support a blocker explanation and one recommended next action.",
+        "No n8n workflow, customer contact, record update, or approval executes."
+      ]
+    }
+  ]
+}

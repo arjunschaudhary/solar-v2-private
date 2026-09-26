@@ -1,0 +1,215 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "Solar SOP retrieval \u00b7 current and planned RAG",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1080,
+      720
+    ],
+    "views": [
+      {
+        "id": "index",
+        "label": "Planned SOP index",
+        "focus": [
+          "sop",
+          "chunks",
+          "embedding",
+          "vector"
+        ],
+        "note": "Synthetic SOPs would be chunked, embedded and indexed if scale requires it."
+      },
+      {
+        "id": "query",
+        "label": "Planned query path",
+        "focus": [
+          "question",
+          "semantic",
+          "vector",
+          "context",
+          "response"
+        ],
+        "note": "Question embedding and vector search would supply relevant passages to the model."
+      },
+      {
+        "id": "current",
+        "label": "Current baseline",
+        "focus": [
+          "sop",
+          "question",
+          "context",
+          "response"
+        ],
+        "note": "Today the small SOP library uses local lexical search; the vector stages are not implemented."
+      }
+    ]
+  },
+  "stages": [
+    {
+      "label": "Source"
+    },
+    {
+      "label": "Prepare"
+    },
+    {
+      "label": "Index"
+    },
+    {
+      "label": "Retrieve"
+    },
+    {
+      "label": "Answer"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "sop",
+      "type": "database",
+      "label": "Synthetic SOP",
+      "sublabel": "CURRENT \u00b7 versioned text",
+      "stage": 0,
+      "row": 0
+    },
+    {
+      "id": "question",
+      "type": "frontend",
+      "label": "User question",
+      "sublabel": "CURRENT \u00b7 read only",
+      "stage": 0,
+      "row": 3
+    },
+    {
+      "id": "chunks",
+      "type": "backend",
+      "label": "Chunk SOP",
+      "sublabel": "PLANNED \u00b7 bounded text",
+      "stage": 1,
+      "row": 0
+    },
+    {
+      "id": "embedding",
+      "type": "backend",
+      "label": "Embeddings",
+      "sublabel": "PLANNED \u00b7 docs + query",
+      "stage": 2,
+      "row": 0
+    },
+    {
+      "id": "vector",
+      "type": "database",
+      "label": "Vector index",
+      "sublabel": "PLANNED \u00b7 no store yet",
+      "stage": 3,
+      "row": 0
+    },
+    {
+      "id": "semantic",
+      "type": "backend",
+      "label": "Query embed/search",
+      "sublabel": "PLANNED \u00b7 semantic",
+      "stage": 3,
+      "row": 3
+    },
+    {
+      "id": "context",
+      "type": "backend",
+      "label": "Model context",
+      "sublabel": "facts + SOP passages",
+      "stage": 4,
+      "row": 1
+    },
+    {
+      "id": "response",
+      "type": "external",
+      "label": "Grounded answer",
+      "sublabel": "sources + next action",
+      "stage": 4,
+      "row": 4
+    }
+  ],
+  "flows": [
+    {
+      "id": "chunk",
+      "from": "sop",
+      "to": "chunks",
+      "label": "split SOP text",
+      "classification": "planned",
+      "variant": "dashed"
+    },
+    {
+      "id": "doc-embed",
+      "from": "chunks",
+      "to": "embedding",
+      "label": "document vectors",
+      "classification": "planned",
+      "variant": "dashed"
+    },
+    {
+      "id": "store",
+      "from": "embedding",
+      "to": "vector",
+      "label": "index vectors",
+      "classification": "planned",
+      "variant": "dashed"
+    },
+    {
+      "id": "query-search",
+      "from": "question",
+      "to": "semantic",
+      "label": "query embedding",
+      "classification": "planned",
+      "variant": "dashed"
+    },
+    {
+      "id": "nearest",
+      "from": "vector",
+      "to": "semantic",
+      "label": "relevant chunks",
+      "classification": "planned",
+      "variant": "dashed",
+      "labelAt": [
+        735,
+        300
+      ]
+    },
+    {
+      "id": "ground",
+      "from": "semantic",
+      "to": "context",
+      "label": "retrieved SOP text",
+      "classification": "planned",
+      "variant": "dashed"
+    },
+    {
+      "id": "answer",
+      "from": "context",
+      "to": "response",
+      "label": "grounded reply",
+      "classification": "read-only",
+      "variant": "emphasis",
+      "labelAt": [
+        1040,
+        450
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Already implemented",
+      "items": [
+        "Eight synthetic SOP documents are searched locally by terms and aliases.",
+        "The read-only agent can cite matching guidance without a vector database."
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Conditional future path",
+      "items": [
+        "Chunking, document/query embeddings, vector storage, and semantic search are not deployed.",
+        "Adopt them only if the knowledge corpus grows or retrieval evaluation shows a need."
+      ]
+    }
+  ]
+}

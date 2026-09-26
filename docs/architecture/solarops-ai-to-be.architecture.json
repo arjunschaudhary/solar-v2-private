@@ -1,0 +1,530 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "SolarOps AI \u00b7 read-only extension",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1330,
+      820
+    ],
+    "repository": {
+      "url": "https://github.com/arjunschaudhary/solar-v2-private",
+      "provider": "github",
+      "revision": "74318359a31c99d3cb1b25ba93aa3ff90e10de67"
+    },
+    "views": [
+      {
+        "id": "existing",
+        "label": "Existing operations",
+        "focus": [
+          "browser",
+          "ui",
+          "workspace",
+          "bridge",
+          "sheets",
+          "n8n",
+          "providers"
+        ],
+        "note": "Existing app and independent n8n operations continue through Apps Script."
+      },
+      {
+        "id": "read-only",
+        "label": "Agent question",
+        "focus": [
+          "browser",
+          "ui",
+          "agent",
+          "tools",
+          "bridge",
+          "sheets",
+          "model"
+        ],
+        "note": "The agent gets a safe snapshot and calls read-only tools before generating an answer."
+      },
+      {
+        "id": "knowledge",
+        "label": "SOP retrieval",
+        "focus": [
+          "agent",
+          "tools",
+          "sop",
+          "model"
+        ],
+        "note": "Eight synthetic SOPs currently use local lexical retrieval; no vector store is deployed."
+      },
+      {
+        "id": "activity",
+        "label": "Agent activity",
+        "focus": [
+          "ui",
+          "activity",
+          "agent",
+          "tools"
+        ],
+        "note": "Safe prompt, tool, source, and outcome metadata stays in this browser."
+      },
+      {
+        "id": "actions",
+        "label": "Action boundary",
+        "focus": [
+          "agent",
+          "n8n",
+          "providers"
+        ],
+        "note": "Agent-to-n8n write execution is disabled; ordinary n8n workers remain separate."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "browser",
+      "type": "external",
+      "label": "User / Browser",
+      "sublabel": "demo or private view",
+      "pos": [
+        30,
+        295
+      ],
+      "size": [
+        150,
+        68
+      ]
+    },
+    {
+      "id": "ui",
+      "type": "frontend",
+      "label": "Next.js UI",
+      "sublabel": "SolarOps + workspace",
+      "pos": [
+        220,
+        295
+      ],
+      "size": [
+        150,
+        68
+      ],
+      "sources": [
+        {
+          "path": "app/workspace.tsx",
+          "line": 20,
+          "end_line": 45,
+          "label": "navigation"
+        },
+        {
+          "path": "app/solarops-ai.tsx",
+          "line": 20,
+          "end_line": 34,
+          "label": "agent UI"
+        }
+      ]
+    },
+    {
+      "id": "workspace",
+      "type": "backend",
+      "label": "Workspace API",
+      "sublabel": "existing reads / writes",
+      "pos": [
+        430,
+        295
+      ],
+      "size": [
+        150,
+        68
+      ],
+      "sources": [
+        {
+          "path": "app/api/workspace/route.ts",
+          "line": 15,
+          "end_line": 84,
+          "label": "route guards"
+        }
+      ]
+    },
+    {
+      "id": "agent",
+      "type": "backend",
+      "label": "Agent API",
+      "sublabel": "read-only requests",
+      "pos": [
+        430,
+        455
+      ],
+      "size": [
+        150,
+        68
+      ],
+      "sources": [
+        {
+          "path": "app/api/agent/route.ts",
+          "line": 1,
+          "end_line": 21,
+          "label": "agent endpoint"
+        }
+      ]
+    },
+    {
+      "id": "tools",
+      "type": "backend",
+      "label": "Read tools",
+      "sublabel": "customer + project + SOP",
+      "pos": [
+        640,
+        455
+      ],
+      "size": [
+        150,
+        68
+      ],
+      "sources": [
+        {
+          "path": "lib/solar-agent.ts",
+          "line": 26,
+          "end_line": 42,
+          "label": "tool definitions"
+        },
+        {
+          "path": "lib/solar-agent-data.ts",
+          "line": 1,
+          "end_line": 17,
+          "label": "read operations"
+        }
+      ]
+    },
+    {
+      "id": "bridge",
+      "type": "backend",
+      "label": "Apps Script API",
+      "sublabel": "private token boundary",
+      "pos": [
+        870,
+        295
+      ],
+      "size": [
+        160,
+        68
+      ],
+      "sources": [
+        {
+          "path": "lib/solar-data.ts",
+          "line": 5,
+          "end_line": 72,
+          "label": "snapshot mode"
+        },
+        {
+          "path": "integrations/apps-script/Bridge.gs",
+          "line": 15,
+          "end_line": 42,
+          "label": "bridge"
+        }
+      ]
+    },
+    {
+      "id": "sheets",
+      "type": "database",
+      "label": "Google Sheets",
+      "sublabel": "operational records",
+      "pos": [
+        1110,
+        295
+      ],
+      "size": [
+        160,
+        68
+      ],
+      "sources": [
+        {
+          "path": "lib/solar-core.ts",
+          "line": 1,
+          "end_line": 5,
+          "label": "tables"
+        }
+      ]
+    },
+    {
+      "id": "activity",
+      "type": "database",
+      "label": "Agent Activity",
+      "sublabel": "browser local storage",
+      "pos": [
+        220,
+        680
+      ],
+      "size": [
+        150,
+        68
+      ],
+      "sources": [
+        {
+          "path": "app/solarops-ai.tsx",
+          "line": 11,
+          "end_line": 26,
+          "label": "safe metadata"
+        }
+      ]
+    },
+    {
+      "id": "model",
+      "type": "external",
+      "label": "Gemini model",
+      "sublabel": "server-side provider",
+      "pos": [
+        430,
+        680
+      ],
+      "size": [
+        150,
+        68
+      ],
+      "sources": [
+        {
+          "path": "lib/solar-agent.ts",
+          "line": 1,
+          "end_line": 16,
+          "label": "model config"
+        }
+      ]
+    },
+    {
+      "id": "sop",
+      "type": "database",
+      "label": "Synthetic SOPs",
+      "sublabel": "local lexical retrieval",
+      "pos": [
+        640,
+        680
+      ],
+      "size": [
+        150,
+        68
+      ],
+      "sources": [
+        {
+          "path": "lib/solar-knowledge.ts",
+          "line": 1,
+          "end_line": 28,
+          "label": "SOP corpus"
+        }
+      ]
+    },
+    {
+      "id": "n8n",
+      "type": "backend",
+      "label": "n8n operations",
+      "sublabel": "agent actions disabled",
+      "pos": [
+        870,
+        680
+      ],
+      "size": [
+        160,
+        68
+      ],
+      "sources": [
+        {
+          "path": "integrations/n8n/02_followup_queue.json",
+          "label": "existing worker"
+        }
+      ]
+    },
+    {
+      "id": "providers",
+      "type": "external",
+      "label": "Google services",
+      "sublabel": "Gmail / Calendar / Drive",
+      "pos": [
+        1110,
+        680
+      ],
+      "size": [
+        160,
+        68
+      ],
+      "sources": [
+        {
+          "path": "integrations/n8n/03_email_delivery.json",
+          "label": "Gmail"
+        },
+        {
+          "path": "integrations/n8n/04_site_visit_calendar.json",
+          "label": "Calendar"
+        },
+        {
+          "path": "integrations/apps-script/Bridge.gs",
+          "line": 86,
+          "end_line": 99,
+          "label": "Drive / Docs"
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Vercel app and server",
+      "wraps": [
+        "ui",
+        "workspace",
+        "agent",
+        "tools"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Google operational store",
+      "wraps": [
+        "bridge",
+        "sheets"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "browser-ui",
+      "from": "browser",
+      "to": "ui",
+      "label": "HTTPS"
+    },
+    {
+      "id": "ui-workspace",
+      "from": "ui",
+      "to": "workspace",
+      "label": "workspace data",
+      "labelAt": [
+        400,
+        275
+      ]
+    },
+    {
+      "id": "workspace-bridge",
+      "from": "workspace",
+      "to": "bridge",
+      "label": "server token",
+      "variant": "security",
+      "labelAt": [
+        730,
+        380
+      ]
+    },
+    {
+      "id": "bridge-sheets",
+      "from": "bridge",
+      "to": "sheets",
+      "label": "snapshot / save",
+      "labelAt": [
+        1070,
+        380
+      ]
+    },
+    {
+      "id": "ui-agent",
+      "from": "ui",
+      "to": "agent",
+      "label": "question",
+      "labelAt": [
+        400,
+        430
+      ]
+    },
+    {
+      "id": "agent-tools",
+      "from": "agent",
+      "to": "tools",
+      "label": "read-only calls",
+      "labelAt": [
+        610,
+        545
+      ]
+    },
+    {
+      "id": "tools-bridge",
+      "from": "tools",
+      "to": "bridge",
+      "label": "private snapshot",
+      "labelAt": [
+        835,
+        430
+      ]
+    },
+    {
+      "id": "tools-sop",
+      "from": "tools",
+      "to": "sop",
+      "label": "lexical search",
+      "labelAt": [
+        715,
+        625
+      ]
+    },
+    {
+      "id": "agent-model",
+      "from": "agent",
+      "to": "model",
+      "label": "grounded context",
+      "labelAt": [
+        505,
+        625
+      ]
+    },
+    {
+      "id": "ui-activity",
+      "from": "ui",
+      "to": "activity",
+      "label": "safe run metadata",
+      "variant": "dashed",
+      "labelAt": [
+        295,
+        575
+      ]
+    },
+    {
+      "id": "n8n-bridge",
+      "from": "n8n",
+      "to": "bridge",
+      "label": "existing queue API",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "labelAt": [
+        945,
+        560
+      ]
+    },
+    {
+      "id": "n8n-providers",
+      "from": "n8n",
+      "to": "providers",
+      "label": "existing delivery",
+      "variant": "dashed",
+      "labelAt": [
+        1070,
+        765
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Implemented read-only layer",
+      "items": [
+        "The agent uses a server snapshot and read-only project/SOP functions.",
+        "Public mode gets synthetic data before any private Sheets request."
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Knowledge and activity",
+      "items": [
+        "Small synthetic SOP corpus: local lexical retrieval, not embeddings or vector storage.",
+        "Agent activity is browser-local metadata, not a durable team audit store."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Action boundary",
+      "items": [
+        "The existing app can write through /api/workspace in private mode.",
+        "SolarOps AI has no n8n action tool. Future approved writes are outside this version."
+      ]
+    }
+  ]
+}
