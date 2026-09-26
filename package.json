@@ -15,10 +15,12 @@
     "db:generate": "bash scripts/sites-env.sh -- drizzle-kit generate"
   },
   "dependencies": {
+    "@ai-sdk/google": "^4.0.82",
     "@base-ui/react": "^1.7.0",
     "@hookform/resolvers": "^5.7.1",
     "@shadcn/react": "^0.3.0",
     "@vercel/analytics": "^2.0.1",
+    "ai": "^7.0.116",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "cmdk": "^1.1.1",
@@ -38,6 +40,7 @@
     "react-resizable-panels": "^4.12.2",
     "recharts": "^3.8.0",
     "sonner": "^2.0.8",
+    "streamdown": "^2.6.0",
     "tailwind-merge": "3.6.0",
     "vaul": "^1.1.2",
     "zod": "^3.25.76"

@@ -4,13 +4,14 @@ Solar EPC CRM and operations application that manages the journey from enquiry c
 
 ## Current status
 
-- Public production showcase on Vercel using fictional data
+- Public production showcase uses only in-app synthetic data and never requests the private Sheet
 - GitHub `main` connected to automatic Vercel production deployments
 - Public showcase blocks browser write actions; integration testing uses protected deployments
 - Live business data stored in Google Sheets through an Apps Script bridge
-- External work executed by six inactive-by-default n8n workflows
+- Read-only SolarOps AI can inspect projects, diagnose stalls, recommend next actions, and retrieve synthetic SOP guidance
+- n8n action execution remains disabled for SolarOps AI
 - Gmail, Google Calendar, Drive/Docs, and PDF proposal delivery tested end to end
-- 32 automated checks passing
+- 37 automated checks passing
 - Desktop, tablet, and 390 × 844 mobile layouts verified
 - AI qualification optional and disabled by default
 
@@ -24,11 +25,14 @@ Solar EPC CRM and operations application that manages the journey from enquiry c
 | Proposals | Create versioned proposals, generate private Docs/PDFs, share reviewed versions, and record decisions |
 | Delivery | Queue work, claim once, record provider outcomes, and isolate uncertain sends for review |
 | Management | Display operational counts and queue a daily summary email |
+| SolarOps AI | Search synthetic customers, inspect projects, find delays, explain stalls, retrieve SOP guidance, and show safe tool activity |
 
 ## Architecture
 
 ```mermaid
 flowchart TD
+  Agent["SolarOps AI · read only"] --> API
+  Agent --> SOP["Versioned synthetic SOP library"]
   Form["Google Form"] --> Intake["n8n intake"]
   App["Vercel app"] --> API["Protected server API"]
   Intake --> Bridge["Apps Script bridge"]
@@ -39,7 +43,9 @@ flowchart TD
   Workers --> Bridge
 ```
 
-The browser never receives the Apps Script token. It calls `/api/workspace`; the Vercel function adds server-only credentials and forwards approved actions to Apps Script. The API rejects cross-origin writes, large requests, unsupported actions, invalid integration URLs, and incomplete configuration.
+The browser never receives the Apps Script token. It calls `/api/workspace`; the Vercel function adds server-only credentials and forwards approved actions to Apps Script. In public-showcase mode, that route returns the synthetic in-app workspace before any Apps Script request can occur. `/api/agent` uses the same safe snapshot boundary.
+
+SolarOps AI uses the existing Sheets/Apps Script records in private mode and read-only tools shaped around the current tabs. No Supabase project is required for this stage: the small synthetic SOP corpus is versioned in the application and retrieved locally, while safe agent activity is retained in the user's browser. A vector database can be evaluated later if the knowledge corpus becomes large or needs non-developer publishing workflows.
 
 ## Safety baseline
 
@@ -60,16 +66,18 @@ Configure these in Vercel for Preview and Production. Values are stored in Verce
 SOLAR_APPS_SCRIPT_URL=
 SOLAR_AUTOMATION_TOKEN=
 SOLAR_OPERATOR_EMAIL=
+GOOGLE_GENERATIVE_AI_API_KEY=
+SOLAR_AI_MODEL=gemini-3.5-flash
 ```
 
-The first two should be Secret values. The operator email and showcase flag may be Config. Set `SOLAR_PUBLIC_SHOWCASE=Yes` only while production is intentionally public; this blocks all browser write actions. Do not prefix any of them with `NEXT_PUBLIC_`.
+The Apps Script token and Google AI key should be Secret values. The operator email, model name, and showcase flag may be Config. Set `SOLAR_PUBLIC_SHOWCASE=Yes` only while production is intentionally public; this serves synthetic data and blocks all browser write actions. If the Gemini key is absent, SolarOps AI uses its deterministic grounded demo engine so read-only questions remain testable. Do not prefix any of these values with `NEXT_PUBLIC_`.
 
 ## Verification
 
 The current baseline passed:
 
 - Vercel-targeted Nitro/Vinext production build
-- 32 automated business-rule, API, workflow-topology, UI-component, and bundle checks
+- 37 automated business-rule, public-data-safety, agent-grounding, API, workflow-topology, UI-component, and bundle checks
 - Google Sheets read and write through the protected Vercel Preview
 - Enquiry intake and duplicate protection
 - Follow-up queueing and test email delivery

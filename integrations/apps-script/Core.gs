@@ -481,16 +481,64 @@ Shared proposals: ${s.proposals.filter((r) => r.proposal_status === "Shared").le
     return { state: s, result };
   }
   function demoWorkspace(now = (/* @__PURE__ */ new Date()).toISOString()) {
-    let s = emptyWorkspace();
-    s.team = [{ team_member: "Rahul Sharma", role: "Sales Executive", project_type_supported: "Residential", active_status: "Active", location: "Delhi NCR" }, { team_member: "Priya Mehta", role: "Sales Manager", project_type_supported: "Commercial", active_status: "Active", location: "Pan India" }, { team_member: "Amit Verma", role: "Site Engineer", project_type_supported: "Institutional", active_status: "Active", location: "Delhi NCR" }, { team_member: "Neha Singh", role: "EPC Coordinator", project_type_supported: "Industrial", active_status: "Active", location: "Pan India" }];
-    const rows = [["Mira Shah", "Aster Logistics", "Commercial", "Gurugram", "100 kW"], ["Dev Sethi", "Lakeview Residence", "Residential", "Delhi", "5 kW"], ["Sana Ali", "Northstar Foods", "Industrial", "Noida", "250 kW"], ["Kabir Rao", "Cedar School", "Institutional", "Faridabad", "50 kW"], ["Rhea Jain", "Harbour Offices", "Commercial", "Pune", "75 kW"], ["Ishaan Patel", "Patel Residence", "Residential", "Ahmedabad", "3 kW"], ["Neel Kapoor", "Summit Works", "Industrial", "Jaipur", "150 kW"], ["Aditi Das", "Orion Retail", "Commercial", "Mumbai", "35 kW"]];
-    rows.forEach((r, i) => {
-      s = applyAction(s, { type: "create_lead", request_id: "demo-" + i, payload: { client_name: r[0], company_name: r[1], email: "demo" + i + "@example.com", location: r[3], project_type: r[2], estimated_capacity: r[4], budget_range: i < 4 ? "\u20B910\u201325 lakhs" : "Not sure", timeline: i < 3 ? "Within 1 month" : "1-3 months", site_visit_required: i % 2 ? "No" : "Yes", electricity_bill_available: "Yes", message: "Please help us plan the next steps for this solar project." } }, "Sample workspace", now).state;
-      s.followups[i].followup_due_date = addDays(day(now), i < 2 ? -1 : i < 5 ? 0 : 2);
-      s.leads[i].next_followup_date = s.followups[i].followup_due_date;
+    const today = day(now), iso = (offset) => new Date(Date.parse(now) + offset * 864e5).toISOString();
+    const s = emptyWorkspace();
+    s.config = { SEND_MODE: "TEST", AUTOMATION_ENABLED: "No", TEST_RECEIVER_EMAIL: "solarops-demo@example.com", MANAGER_EMAIL: "ops-manager@example.com", CALENDAR_ID: "demo-calendar@example.com", TEST_CALENDAR_ID: "demo-test-calendar@example.com", PROPOSAL_FOLDER_ID: "" };
+    s.team = [
+      { team_member: "Rohan Demo", role: "Sales Executive", project_type_supported: "Residential", active_status: "Active", location: "Delhi NCR" },
+      { team_member: "Meera Demo", role: "Sales Manager", project_type_supported: "Commercial", active_status: "Active", location: "Pan India" },
+      { team_member: "Aarav Demo", role: "Site Engineer", project_type_supported: "Institutional", active_status: "Active", location: "Delhi NCR" },
+      { team_member: "Naina Demo", role: "EPC Coordinator", project_type_supported: "Industrial", active_status: "Active", location: "Pan India" }
+    ];
+    const projects = [
+      ["DEMO-001", "Rajesh Sharma", "Sharma Textiles", "Industrial", "Faridabad", "250 kW", "Proposal", "Naina Demo", "Hot", 9, "\u20B91\u20132 crore", "Immediately", "Awaiting finance approval after proposal review."],
+      ["DEMO-002", "Priya Kapoor", "Kapoor Heights", "Residential", "Gurugram", "8 kW", "Site Visit", "Rohan Demo", "Warm", 7, "\u20B95\u201310 lakhs", "Within 1 month", "Roof access approval from the housing society is still pending."],
+      ["DEMO-003", "Mira Shah", "Aster Logistics", "Commercial", "Gurugram", "100 kW", "Contacted", "Meera Demo", "Hot", 8, "\u20B950\u201375 lakhs", "Within 1 month", "Electricity bill and sanctioned-load details have not been received."],
+      ["DEMO-004", "Dev Sethi", "Lakeview Residence", "Residential", "Delhi", "5 kW", "Qualified", "Rohan Demo", "Warm", 6, "\u20B93\u20135 lakhs", "1-3 months", "Customer asked for a follow-up after comparing financing options."],
+      ["DEMO-005", "Sana Ali", "Northstar Foods", "Industrial", "Noida", "250 kW", "Proposal", "Naina Demo", "Hot", 9, "\u20B91\u20132 crore", "Immediately", "Proposal needs a revised structural reinforcement allowance."],
+      ["DEMO-006", "Kabir Rao", "Cedar School", "Institutional", "Faridabad", "50 kW", "Converted", "Meera Demo", "Warm", 7, "\u20B925\u201350 lakhs", "1-3 months", "Proposal accepted; installation handoff is ready."],
+      ["DEMO-007", "Rhea Jain", "Harbour Offices", "Commercial", "Pune", "75 kW", "Site Visit", "Meera Demo", "Warm", 6, "\u20B950\u201375 lakhs", "1-3 months", "Survey completed; proposal scope has not yet been drafted."],
+      ["DEMO-008", "Ishaan Patel", "Patel Residence", "Residential", "Ahmedabad", "3 kW", "Lost", "Rohan Demo", "Cold", 3, "\u20B92\u20133 lakhs", "Just exploring", "Closed after the customer deferred the project."],
+      ["DEMO-009", "Neel Kapoor", "Summit Works", "Industrial", "Jaipur", "150 kW", "Contacted", "Naina Demo", "Hot", 8, "\u20B975 lakhs\u20131 crore", "Within 1 month", "Follow-up is overdue after the discovery call."],
+      ["DEMO-010", "Aditi Das", "Orion Retail", "Commercial", "Mumbai", "35 kW", "Qualified", "Meera Demo", "Warm", 5, "Not sure", "3-6 months", "Budget owner and target commissioning date are unconfirmed."],
+      ["DEMO-011", "Zoya Khan", "Meridian Hospital", "Institutional", "Lucknow", "120 kW", "Proposal", "Meera Demo", "Hot", 9, "\u20B975 lakhs\u20131 crore", "Immediately", "Technical committee review is pending."],
+      ["DEMO-012", "Vikram Menon", "GreenArc Apartments", "Residential", "Bengaluru", "20 kW", "Stopped", "Rohan Demo", "Cold", 4, "\u20B910\u201325 lakhs", "3-6 months", "Manual hold recorded while the residents vote on the project."]
+    ];
+    s.leads = projects.map((p, i) => ({ lead_id: p[0], lead_key: "SYNTHETIC|" + p[0], created_at: iso(-30 + i), client_name: p[1], company_name: p[2], email: `solar.demo.${i + 1}@example.com`, phone: `900000${String(i + 1).padStart(4, "0")}`, location: p[4], project_type: p[3], estimated_capacity: p[5], budget_range: p[10], timeline: p[11], electricity_bill_available: i === 2 ? "No" : "Yes", site_visit_required: ["Site Visit", "Proposal"].includes(p[6]) ? "Yes" : "No", message: "Synthetic demonstration record for a fictional solar project.", lead_source: "Synthetic demo", current_status: p[6], assigned_to: p[7], next_followup_date: "", escalation_flag: "No", last_action: p[12], last_action_at: iso(-Math.max(1, 12 - i)), notes: p[12], manual_stop: p[6] === "Stopped" ? "Yes" : "No", acknowledgement_sent_at: iso(-29 + i), updated_at: iso(-Math.max(1, 12 - i)), version: 1 }));
+    s.intelligence = projects.map((p, i) => ({ lead_id: p[0], urgency_score: p[9], lead_temperature: p[8], project_category: p[3], client_summary: `${p[2]}: synthetic ${p[3].toLowerCase()} ${p[5]} solar opportunity in ${p[4]}.`, missing_information: i === 2 ? "Electricity bill, sanctioned load" : i === 9 ? "Budget range, target commissioning date" : "No major missing information", suggested_next_action: p[12], ai_used: "No", ai_processed_at: iso(-30 + i) }));
+    const followupRows = [
+      ["FU-001", "DEMO-001", -4, "Confirm finance committee decision"],
+      ["FU-002", "DEMO-002", -2, "Confirm roof-access approval"],
+      ["FU-003", "DEMO-003", 0, "Collect electricity bill and sanctioned-load details"],
+      ["FU-004", "DEMO-004", 2, "Discuss financing options"],
+      ["FU-005", "DEMO-005", -1, "Send revised structural scope"],
+      ["FU-007", "DEMO-007", 0, "Prepare proposal from survey findings"],
+      ["FU-009", "DEMO-009", -5, "Reconnect after discovery call"],
+      ["FU-010", "DEMO-010", 3, "Confirm budget owner and commissioning date"],
+      ["FU-011", "DEMO-011", 1, "Schedule technical committee clarification call"]
+    ];
+    s.followups = followupRows.map((f, i) => {
+      const l = s.leads.find((x) => x.lead_id === f[1]);
+      return { followup_id: f[0], lead_id: f[1], client_name: l.client_name, email: l.email, assigned_to: l.assigned_to, followup_stage: `Follow-up ${i + 1}`, followup_due_date: addDays(today, f[2]), followup_status: "Pending", last_email_sent_at: "", next_action: f[3], notes: "Synthetic task", channel: "Manual", automation_enabled: "No", completed_at: "", outcome: "", updated_at: now, version: 1 };
     });
-    s = applyAction(s, { type: "schedule_visit", request_id: "demo-visit", payload: { lead_id: s.leads[0].lead_id, assigned_engineer: "Amit Verma", starts_at: new Date(Date.parse(now) + 864e5).toISOString(), required_documents: "Electricity bill and roof layout" } }, "Sample workspace", now).state;
-    s = applyAction(s, { type: "create_proposal", request_id: "demo-proposal", payload: { lead_id: s.leads[2].lead_id, amount: 42e5, notes: "250 kW rooftop installation. Scope includes panels, inverters, mounting structures and installation. Sample estimate only." } }, "Sample workspace", now).state;
+    for (const l of s.leads) {
+      const task = s.followups.find((f) => f.lead_id === l.lead_id);
+      l.next_followup_date = task?.followup_due_date || "";
+      l.escalation_flag = task?.followup_due_date < today ? "Yes" : "No";
+    }
+    s.visits = [
+      { site_visit_id: "SV-001", lead_id: "DEMO-002", client_name: "Priya Kapoor", assigned_engineer: "Aarav Demo", visit_date: addDays(today, 2), checklist_status: "Pending", required_documents: "Latest electricity bill and roof-access approval", visit_notes: "", photos_link: "", visit_status: "Scheduled", starts_at: iso(2), ends_at: new Date(Date.parse(iso(2)) + 36e5).toISOString(), calendar_event_id: "", calendar_sync_status: "Not connected", updated_at: now, version: 1 },
+      { site_visit_id: "SV-002", lead_id: "DEMO-007", client_name: "Rhea Jain", assigned_engineer: "Aarav Demo", visit_date: addDays(today, -6), checklist_status: "Completed", required_documents: "Roof plan and sanctioned load", visit_notes: "Roof area is adequate. Minor shadowing on the south-west edge; use split MPPT design.", photos_link: "https://example.com/synthetic-survey", visit_status: "Completed", starts_at: iso(-6), ends_at: new Date(Date.parse(iso(-6)) + 36e5).toISOString(), calendar_event_id: "demo-event", calendar_sync_status: "Synced", updated_at: iso(-6), version: 1 },
+      { site_visit_id: "SV-003", lead_id: "DEMO-005", client_name: "Sana Ali", assigned_engineer: "Aarav Demo", visit_date: addDays(today, -10), checklist_status: "Completed", required_documents: "Structural drawings and load profile", visit_notes: "Structure requires reinforcement allowance before final pricing.", photos_link: "https://example.com/synthetic-survey-2", visit_status: "Completed", starts_at: iso(-10), ends_at: new Date(Date.parse(iso(-10)) + 36e5).toISOString(), calendar_event_id: "demo-event-2", calendar_sync_status: "Synced", updated_at: iso(-10), version: 1 }
+    ];
+    s.proposals = [
+      { proposal_id: "PR-001", lead_id: "DEMO-001", client_name: "Rajesh Sharma", proposal_required: "Yes", boq_status: "Final", proposal_status: "Shared", revision_requested: "No", final_proposal_shared: "Yes", approval_status: "Pending", notes: "250 kW rooftop system; synthetic estimate only.", amount: 145e5, currency: "INR", proposal_version: 2, document_url: "", pdf_url: "", document_status: "Ready", sent_at: iso(-7), next_followup_date: addDays(today, -4), updated_at: iso(-7), version: 2 },
+      { proposal_id: "PR-005", lead_id: "DEMO-005", client_name: "Sana Ali", proposal_required: "Yes", boq_status: "Draft", proposal_status: "Draft", revision_requested: "Yes", final_proposal_shared: "No", approval_status: "Pending", notes: "Revise for structural reinforcement.", amount: 162e5, currency: "INR", proposal_version: 2, document_url: "", pdf_url: "", document_status: "Pending", sent_at: "", next_followup_date: "", updated_at: iso(-3), version: 2 },
+      { proposal_id: "PR-006", lead_id: "DEMO-006", client_name: "Kabir Rao", proposal_required: "Yes", boq_status: "Final", proposal_status: "Accepted", revision_requested: "No", final_proposal_shared: "Yes", approval_status: "Accepted", notes: "50 kW school rooftop system.", amount: 31e5, currency: "INR", proposal_version: 1, document_url: "", pdf_url: "", document_status: "Ready", sent_at: iso(-12), next_followup_date: "", updated_at: iso(-8), version: 1 },
+      { proposal_id: "PR-011", lead_id: "DEMO-011", client_name: "Zoya Khan", proposal_required: "Yes", boq_status: "Final", proposal_status: "Shared", revision_requested: "No", final_proposal_shared: "Yes", approval_status: "Pending", notes: "120 kW hospital rooftop system.", amount: 78e5, currency: "INR", proposal_version: 1, document_url: "", pdf_url: "", document_status: "Ready", sent_at: iso(-4), next_followup_date: addDays(today, 1), updated_at: iso(-4), version: 1 }
+    ];
+    s.activity = [{ event_id: "EV-DEMO-1", request_id: "synthetic-seed", lead_id: "", action: "synthetic_workspace_loaded", actor: "SolarOps demo", created_at: now, details: JSON.stringify({ summary: "All records are fictional." }) }];
+    s.version = 1;
     return s;
   }
   return __toCommonJS(solar_core_exports);

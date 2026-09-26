@@ -1,4 +1,5 @@
 import { type Action } from "@/lib/solar-core";
+import { bridge, getWorkspaceSnapshot, publicShowcase } from "@/lib/solar-data";
 
 export const dynamic = "force-dynamic";
 
@@ -10,74 +11,6 @@ const reply = (data: unknown, status = 200) =>
       "X-Content-Type-Options": "nosniff",
     },
   });
-
-function integration() {
-  const url = process.env.SOLAR_APPS_SCRIPT_URL?.trim();
-  const token = process.env.SOLAR_AUTOMATION_TOKEN?.trim();
-
-  if (!url || !token) {
-    throw new Error(
-      "The private Sheets connection is not configured. Set both server integration values.",
-    );
-  }
-
-  let endpoint: URL;
-
-  try {
-    endpoint = new URL(url);
-  } catch {
-    throw new Error("Invalid integration URL.");
-  }
-
-  if (
-    endpoint.protocol !== "https:" ||
-    endpoint.hostname !== "script.google.com" ||
-    !endpoint.pathname.endsWith("/exec")
-  ) {
-    throw new Error("Invalid integration URL.");
-  }
-
-  return {
-    url: endpoint.toString(),
-    token,
-  };
-}
-
-async function bridge(action: unknown) {
-  const config = integration();
-
-  const response = await fetch(config.url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      token: config.token,
-      ...(action as object),
-    }),
-    redirect: "follow",
-    signal: AbortSignal.timeout(25000),
-  });
-
-  if (!response.ok) {
-    throw new Error("The Sheets connection is unavailable.");
-  }
-
-  const data = (await response.json()) as {
-    ok?: boolean;
-    error?: string;
-    [key: string]: unknown;
-  };
-
-  if (!data.ok) {
-    throw new Error(data.error || "The Sheet could not be updated.");
-  }
-
-  return data;
-}
-
-const publicShowcase = () =>
-  process.env.SOLAR_PUBLIC_SHOWCASE?.trim() === "Yes";
 
 const allowedActions = [
   "create_lead",
@@ -93,12 +26,7 @@ const allowedActions = [
 
 export async function GET() {
   try {
-    const data = await bridge({ type: "snapshot" });
-
-    return reply({
-      state: data.state,
-      mode: publicShowcase() ? "showcase" : "sheets",
-    });
+    return reply(await getWorkspaceSnapshot());
   } catch (error) {
     return reply(
       {

@@ -4,8 +4,8 @@ import "./globals.css";
 import "./solar.css";
 
 export const metadata: Metadata = {
-  title: "Solar EPC · Operations",
-  description: "Manage solar enquiries, follow-ups, site visits, and proposals.",
+  title: "SolarOps AI · Solar EPC Operations",
+  description: "Read-only AI assistance for solar customers, projects, tasks, surveys, proposals, and operating knowledge.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

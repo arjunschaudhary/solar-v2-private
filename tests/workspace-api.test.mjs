@@ -168,14 +168,8 @@ test("public showcase remains readable but blocks workspace changes", async () =
   configureIntegration();
   process.env.SOLAR_PUBLIC_SHOWCASE = "Yes";
 
-  globalThis.fetch = async (_url, options) => {
-    const body = JSON.parse(options.body);
-    assert.equal(body.type, "snapshot");
-
-    return Response.json({
-      ok: true,
-      state: { version: 9, leads: [] },
-    });
+  globalThis.fetch = async () => {
+    throw new Error("A public showcase must never request the private Sheet.");
   };
 
   const snapshot = await GET();
@@ -183,6 +177,8 @@ test("public showcase remains readable but blocks workspace changes", async () =
 
   assert.equal(snapshot.status, 200);
   assert.equal(snapshotBody.mode, "showcase");
+  assert.equal(snapshotBody.state.leads.length, 12);
+  assert.ok(snapshotBody.state.leads.every((lead) => lead.lead_source === "Synthetic demo"));
 
   const write = await POST(
     postRequest({
